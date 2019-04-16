@@ -30,7 +30,7 @@ type stackelem = Val of value | Cod of code
 let rec exec = function
    (PairV(x,y), PrimInstr(UnOp(Fst))::c, st) -> exec(x,c,st)
 
-   | (PairV(x,y), PrimInstr(UnOp(Snd))::c, st) -> exec(x,c,st)
+   | (PairV(x,y), PrimInstr(UnOp(Snd))::c, st) -> exec(y,c,st)
 
    | (x, Cons::c,(Val y)::d) -> exec(PairV(y,x), c, d)
 
@@ -68,4 +68,23 @@ let rec exec = function
    | (x, Return::c ,(Cod cc)::d) -> exec(x, cc , d)
 
    | cfg -> cfg;;
+
+
+let rec access v env = match env with
+	[] -> failwith "liste vide"
+	|z::liste -> if z = v then [PrimInstr(UnOp(Snd))]
+			else (PrimInstr(UnOp(Fst)))::(access v liste);;
+	
+
+let rec compile = function
+	|(env,Bool(b)) -> [Quote(BoolV(b))]
+	|(env,Int(i)) -> [Quote(IntV(i))]
+	|(env,Var(v)) -> access v env
+	|(env, Fn(v,e)) -> [Cur(compile(v::env, e)@[Return])]
+	|(env, App(f,a)) -> [Push]@(compile(env,f))@[Swap]@(compile(env,a))@[Cons;App];;
+
+let compile_prog = function
+	Prog(t, exp) -> compile([], exp);;
+
+
 
