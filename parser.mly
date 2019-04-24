@@ -148,8 +148,15 @@ primary_exp_list_as_mlexp:
       }
 ;
 
-mlexp:
+pair_exp:
   bool_exp
+  { $1 }
+| LPAREN pair_exp COMMA pair_exp RPAREN
+  { Pair($2,$4)}
+;
+
+mlexp:
+  pair_exp
     { $1 }
 | IF mlexp THEN mlexp ELSE mlexp
     { Cond($2, $4, $6) }
