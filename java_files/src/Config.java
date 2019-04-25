@@ -1,9 +1,10 @@
 import java.util.*;
 
 class Config extends Object {
-    Value v;
-    LinkedList<Instr> c;
-    LinkedList<StackElem> s;
+    private Value v;
+    private LinkedList<Instr> c;
+    private LinkedList<StackElem> s;
+    private LinkedList<Pair<String, LinkedList<Instr>>> env;
 
     Value get_value() {
         return v;
@@ -14,6 +15,10 @@ class Config extends Object {
     LinkedList<StackElem> get_stack() {
         return s;
     }
+    
+    LinkedList<Pair<String, LinkedList<Instr>>> get_env() {
+        return env;
+    }
 
     void set_value(Value nv) {
         v = nv;
@@ -21,21 +26,24 @@ class Config extends Object {
     void set_code(LinkedList<Instr> nc) {
         c = nc;
     }
-    void get_stack(LinkedList<StackElem> ns) {
+    void set_stack(LinkedList<StackElem> ns) {
         s = ns;
+    }
+    public void set_env(LinkedList<Pair<String, LinkedList<Instr>>> ne) {
+        env = ne;
     }
 
     /* Constructors */
-    public Config (Value vl, LinkedList<Instr> cd, LinkedList<StackElem> se) {
+    public Config (Value vl, LinkedList<Instr> cd, LinkedList<StackElem> se, LinkedList<Pair<String, LinkedList<Instr>>> env) {
         v = vl;
         c = cd;
         s = se;
+        this.env = env;
     }
-
 
     // one-step execution 
     boolean exec_step() {
-        // to be implemented
+        
         if (c.isEmpty()){
             return false;
         }
@@ -48,15 +56,12 @@ class Config extends Object {
 
     // run to completion
     void exec() {
-        // to be implemented
-        while (exec_step()){
-            
-        }
+        while (exec_step()){}
     }
 
     // run for n steps
     void step(int n) {
-        // to be implemented
+        for(int i=0; i<n && exec_step(); n++){}
     }
     
 }

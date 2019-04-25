@@ -1,16 +1,5 @@
-import java.util.*;
-
 class Quote extends Instr {
-    Value v;
-
-    
-    Value get_value() {
-        return v;
-    }
-
-    void set_value(Value nv) {
-        v = nv;
-    }
+    private final Value v;
 
     /* Constructors */
     public Quote (Value vl) {

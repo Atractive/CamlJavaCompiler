@@ -1,3 +1,5 @@
 *.mli
 *.cmo
 *.cmi
+*.class
+/java_files/dist/

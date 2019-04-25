@@ -29,6 +29,7 @@ type stackelem = Val of value | Cod of code;;
 
 type envelem = EVar of var | EDef of var list;;
 
+(*Retire les n premiers éléments de l'environnement*)
 let rec chop n fds =
     if n = 0 then fds
     else 
@@ -47,22 +48,22 @@ let rec exec = function
 
    | (x, Swap::c,(Val y)::st, fds) -> exec(y, c, (Val x)::st, fds)
 
+   | (x, Return::c ,(Cod cc)::st, fds) -> exec(x, cc , st, fds)
+   
    | (t, (Quote v)::c, st, fds) -> exec(v, c, st, fds)
 
+   | (x, (Cur c1)::c,st, fds)  -> exec(ClosureV(c1 ,x), c , st, fds)
+   
    | (PairV(ClosureV(x,y),z), (App::c) ,st , fds)-> exec( PairV(y,z),x , (Cod c)::st, fds)
 
-   | (x, (Cur c1)::c,st, fds)  -> exec(ClosureV(c1 ,x), c , st, fds)
-
-   | (x, Return::c ,(Cod cc)::st, fds) -> exec(x, cc , st, fds)
+   | ((BoolV b), Branch(c1, c2)::c, (Val x)::st, fds) ->
+                exec(x, (if b then c1 else c2) ,(Cod c)::st, fds)
 
    | (t, (Call(f))::c, st, fds) -> exec(t,(List.assoc f fds)@c, st, fds)
 
    | (t, (AddDefs(defs))::c, st, fds) -> exec(t,c,st,defs@fds)
 
    | (t, (RmDefs(n))::c, st, fds) -> exec(t,c,st,(chop n fds))
-
-   | ((BoolV b), Branch(c1, c2)::c, (Val x)::st, fds) ->
-                exec(x, (if b then c1 else c2) ,(Cod c)::st, fds)
 
    | (PairV((IntV m), (IntV n)), PrimInstr(BinOp(BArith(BAadd)))::c,st, fds) ->
                 exec(IntV (m + n), c , st, fds)
@@ -99,6 +100,7 @@ let rec exec = function
 
    | cfg -> cfg;;
 
+(*Raccourci pour la fonction exec*)
 let execute = function 
     config -> exec(NullV, config, [], []);;
 
@@ -134,31 +136,75 @@ let rec compile = function
 	|(env, App(f,a)) -> [Push]@(compile(env,f))@[Swap]@(compile(env,a))@[Cons;App]
     |(env, Pair(e1,e2)) -> [Push]@(compile(env,e1))@[Swap]@(compile(env,e2))@[Cons]
     |(env, Cond(i,t,e)) -> [Push]@(compile(env,i))@[Branch((compile(env,t))@[Return], (compile(env,e))@[Return])]
-    |(env, Fix(defs, e)) -> let new_env = (EDef(function_names defs))::env in
+    |(env, Fix(defs, e)) -> let new_env = (EDef(function_names defs))::env in (*Nouvel environnement avec le nom des fonctions définies*)
                                 let dc=(execute_functions new_env defs)
                                 and ec=(compile(new_env,e)) in
                                     [AddDefs dc]@ec@[RmDefs (List.length dc)]
+
+(*Création de la liste de couple avec le nom de la fonction d'un côté et son corps compilé de l'autre*)
 and execute_functions env defs = 
     (match defs with
         (v, def)::l_defs -> (v, compile(env, def))::(execute_functions env l_defs)
         | [] -> []
     );;
 
-(*
--Ajouter variables à env
--rappeler compile sur la def
-| AddDefs of (var * code) list
-*)
-
 
 let compile_prog = function
 	Prog(t, exp) -> compile([], exp);;
 
-(*let rec print_gen_class_to_java_aux = function
-	 
-let print_gen_class_to_java = 1;;*)
-(*
-exec(NullV, (compile_prog (parse "Tests/test.ml"),[});;
-*)
+(*Convertit une liste d'instruction en chaîne de caractères*)
+let rec print_gen_class_to_java_aux = function
+    (PrimInstr(UnOp(op)))::configs -> "\nLLE.add_elem("^
+                                        (match op with
+                                            Fst -> "new Fst()"
+                                            |Snd -> "new Snd()")^","^(print_gen_class_to_java_aux configs)^")"
 
+    |(PrimInstr(BinOp(BArith(op))))::configs -> "\nLLE.add_elem(new BinOp(BinOp.operateur."^
+                                        (match op with
+                                            BAadd -> "Add"
+                                            |BAsub -> "Sub"
+                                            |BAmul -> "Mult"
+                                            |BAdiv -> "Div"
+                                            |BAmod -> "Mod")^"),"^(print_gen_class_to_java_aux configs)^")"
+
+    |(PrimInstr(BinOp(BCompar(op))))::configs -> "\nLLE.add_elem(new BinOp(BinOp.operateur."^
+                                        (match op with
+                                            BCeq -> "Eq"
+                                            |BCge -> "Ge"
+                                            |BCgt -> "Gt"
+                                            |BCle -> "Le"
+                                            |BClt -> "Lt"
+                                            |BCne -> "Ne")^"),"^(print_gen_class_to_java_aux configs)^")"
+
+    | Cons::configs -> "\nLLE.add_elem(new Cons(),"^(print_gen_class_to_java_aux configs)^")"
+    | Push::configs -> "\nLLE.add_elem(new Push(),"^(print_gen_class_to_java_aux configs)^")"
+    | Swap::configs -> "\nLLE.add_elem(new Swap(),"^(print_gen_class_to_java_aux configs)^")"
+    | Return::configs -> "\nLLE.add_elem(new Return(),"^(print_gen_class_to_java_aux configs)^")"
+    | (Quote v)::configs -> "\nLLE.add_elem(new Quote("^(print_values v)^"),"^(print_gen_class_to_java_aux configs)^")"
+    | (Cur c)::configs -> "\nLLE.add_elem(new Cur("^(print_gen_class_to_java_aux c)^"),"^(print_gen_class_to_java_aux configs)^")"
+    | App::configs -> "\nLLE.add_elem(new App(),"^(print_gen_class_to_java_aux configs)^")"
+    | (Branch(c1,c2))::configs -> "\nLLE.add_elem(new Branch("^(print_gen_class_to_java_aux c1)^","^(print_gen_class_to_java_aux c2)^"),"^(print_gen_class_to_java_aux configs)^")"
+    | (Call v)::configs -> "\nLLE.add_elem(new Call(\""^v^"\"),"^(print_gen_class_to_java_aux configs)^")"
+    | (AddDefs(defs))::configs -> "\nLLE.add_elem(new AddDefs("^(print_defs defs)^"),"^(print_gen_class_to_java_aux configs)^")"
+    | (RmDefs(n))::configs -> "\nLLE.add_elem(new RmDefs("^(string_of_int n)^"), "^(print_gen_class_to_java_aux configs)^")"
+    | [] -> "LLE.empty()"
+(*Convertit les valeurs en chaînes de caractères*)
+and print_values = function
+    NullV -> "new NullV()"
+    | (IntV v) -> "new IntV("^(string_of_int v)^")"
+    | (BoolV b) -> "new BoolV("^(string_of_bool b)^")"
+    | (PairV(x,y)) -> "new PairV("^(print_values x)^","^(print_values y)^")"
+    | (ClosureV(c,v)) -> "new ClosureV("^(print_gen_class_to_java_aux c)^","^(print_values v)^")"
+and print_defs = function
+    (v,c)::defs -> "LLE.add_elem(new Pair(\""^v^"\","^(print_gen_class_to_java_aux c)^"), "^(print_defs defs)^")"
+    | [] -> "LLE.empty()";;
+
+
+let print_gen_class_to_java = function
+    cfg -> "import java.util.*;"^"\n\n"
+            ^"public class Gen {"^"\n"
+            ^"public static LinkedList<Instr> code ="
+            ^(print_gen_class_to_java_aux cfg)^";\n"
+            ^"}"
+            ;;
 

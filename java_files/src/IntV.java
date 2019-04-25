@@ -1,5 +1,3 @@
-import java.util.*;
-
 class IntV extends Value {
     /* Fields */
     int iv;
@@ -9,13 +7,11 @@ class IntV extends Value {
 	iv = i;
     }
 
-    int get_int () {
+    int get_int() {
         return iv;
     }
-    void set_int (int i) {
-        iv = i;
-    }
 
+    @Override
     void print_value() {
         System.out.print(iv);
     }

@@ -103,13 +103,21 @@ comp_exp:
 	{ binary_exp $1 NE $3 }
 ;
 	
-bool_exp:
+and_exp:
 	comp_exp
 	{ $1 }
-| bool_exp BLAND bool_exp
+| and_exp BLAND and_exp
 	{ Cond($1, $3, Bool(false)) }
-| bool_exp BLOR bool_exp
-	{ Cond($1, Bool(true), $3) };
+;
+
+or_exp:
+  and_exp
+  { $1 }
+| or_exp BLOR or_exp
+  { Cond($1, Bool(true), $3)}
+;
+
+
 
 unary_op:
   FST
@@ -149,7 +157,7 @@ primary_exp_list_as_mlexp:
 ;
 
 pair_exp:
-  bool_exp
+  or_exp
   { $1 }
 | LPAREN pair_exp COMMA pair_exp RPAREN
   { Pair($2,$4)}

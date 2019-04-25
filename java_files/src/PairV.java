@@ -1,12 +1,6 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 /**
  *
- * @author mambrois
+ * @author Benjamin Bardy
  */
 public class PairV extends Value{
     private Value fst, snd;
@@ -16,10 +10,18 @@ public class PairV extends Value{
         this.snd = snd;
     }
     
-    public Value getFstValue(){return fst;}
-    public Value getSndValue(){return snd;}
+    public Value get_first(){return fst;}
+    public Value get_snd(){return snd;}
      
-    public void setFstValue(Value nFst){fst = nFst;}
-    public void setSndValue(Value nSnd){snd = nSnd;}
+
+    @Override
+    void print_value() {
+        System.out.print("(");
+        fst.print_value();
+        System.out.print(",");
+        snd.print_value();
+        System.out.print(")");
+    }
         
+    
 }
