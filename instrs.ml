@@ -59,7 +59,7 @@ let rec exec = function
 
    | (t, (AddDefs(defs))::c, st, fds) -> exec(t,c,st,defs@fds)
 
-   | (t, (RmDefs(n))::c, st, fds) -> (t,c,st,(chop n fds))
+   | (t, (RmDefs(n))::c, st, fds) -> exec(t,c,st,(chop n fds))
 
    | ((BoolV b), Branch(c1, c2)::c, (Val x)::st, fds) ->
                 exec(x, (if b then c1 else c2) ,(Cod c)::st, fds)
@@ -121,16 +121,34 @@ let rec access_aux v env res= match env with
 
 let access v env = access_aux v env [];;
 	
+let rec function_names = function
+    (v, _)::defs -> v::(function_names defs)
+    | [] -> [];;
 
 let rec compile = function
 	|(env,Bool(b)) -> [Quote(BoolV(b))]
 	|(env,Int(i)) -> [Quote(IntV(i))]
-	|(env,Var(v)) -> access v env
-	|(env, Fn(v,e)) -> [Cur(compile(v::env, e)@[Return])]
+	|(env, Var(v)) -> access v env
+	|(env, Fn(v,e)) -> [Cur(compile((EVar(v)::env), e)@[Return])]
     |(env, App(PrimOp(p), e)) -> (compile(env,e))@[PrimInstr(p)]
 	|(env, App(f,a)) -> [Push]@(compile(env,f))@[Swap]@(compile(env,a))@[Cons;App]
     |(env, Pair(e1,e2)) -> [Push]@(compile(env,e1))@[Swap]@(compile(env,e2))@[Cons]
-    |(env, Cond(i,t,e)) -> [Push]@(compile(env,i))@[Branch((compile(env,t))@[Return], (compile(env,e))@[Return])];;
+    |(env, Cond(i,t,e)) -> [Push]@(compile(env,i))@[Branch((compile(env,t))@[Return], (compile(env,e))@[Return])]
+    |(env, Fix(defs, e)) -> let new_env = (EDef(function_names defs))::env in
+                                let dc=(execute_functions new_env defs)
+                                and ec=(compile(new_env,e)) in
+                                    [AddDefs dc]@ec@[RmDefs (List.length dc)]
+and execute_functions env defs = 
+    (match defs with
+        (v, def)::l_defs -> (v, compile(env, def))::(execute_functions env l_defs)
+        | [] -> []
+    );;
+
+(*
+-Ajouter variables à env
+-rappeler compile sur la def
+| AddDefs of (var * code) list
+*)
 
 
 let compile_prog = function
