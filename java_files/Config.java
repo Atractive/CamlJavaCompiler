@@ -4,6 +4,12 @@ class Config extends Object {
     private Value v;
     private LinkedList<Instr> c;
     private LinkedList<StackElem> s;
+
+    /*
+        L'environnement est sous la forme d'une liste de couples:
+        -1er élément du couple : le nom de la fonction
+        -2nd élément du couple : le code de la fonction compilé
+    */
     private LinkedList<Pair<String, LinkedList<Instr>>> env;
 
     Value get_value() {
